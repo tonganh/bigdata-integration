@@ -101,10 +101,12 @@ class ShopeeScraper(CommonScraper):
 
     def get_product_info(self):
         logger.info(f"Consuming from {self.url_topic}")
+        terminate_count = 0
         while True:
             logger.info("Polling for messages")
             result = self.url_consumer.poll(timeout_ms=1000, max_records=1)
             if result:
+                terminate_count = 0
                 logger.info("Message found")
                 records = list(result.values())[0]
                 for record in records:
@@ -156,6 +158,9 @@ class ShopeeScraper(CommonScraper):
 
             else:
                 logger.info('No message found in buffer')
+                terminate_count += 1
+                if terminate_count == 900:
+                    break
 
     def _iterate_all_product_type(self, type_index, type_arr, **kwargs):
         if type_index == len(type_arr):

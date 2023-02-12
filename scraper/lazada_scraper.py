@@ -104,10 +104,12 @@ class LazadaScraper(CommonScraper):
 
     def get_product_info(self, scroll_retry=3):
         logger.info(f"Consuming from {self.url_topic}")
+        terminate_count = 0
         while True:
             logger.info("Polling for messages")
             result = self.url_consumer.poll(timeout_ms=1000, max_records=1)
             if result:
+                terminate_count = 0
                 logger.info("Message found")
                 records = list(result.values())[0]
                 for record in records:
@@ -162,8 +164,11 @@ class LazadaScraper(CommonScraper):
 
                     except Exception as e:
                         logger.error(e)
-        else:
-            logger.info('No message found in buffer')
+            else:
+                logger.info('No message found in buffer')
+                terminate_count += 1
+                if terminate_count == 900:
+                    break
 
     def _get_product_info_helper(self, scroll_retry, curr_url, category):
         try:
