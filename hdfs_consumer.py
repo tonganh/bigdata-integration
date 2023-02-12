@@ -4,8 +4,8 @@ import argparse
 from kafka import KafkaConsumer
 
 
-# BOOTSTRAP_SERVERS = ['viet:9092', 'jazzdung:9092', 'dungbruh:9092']
-BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093']
+BOOTSTRAP_SERVERS = ['viet:9092', 'jazzdung:9092', 'dungbruh:9092']
+# BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093']
 
 logging.basicConfig(level=logging.INFO)
 
