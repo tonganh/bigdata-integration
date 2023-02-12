@@ -16,11 +16,12 @@ logger = logging.getLogger(__name__)
 
 class ShopeeScraper(CommonScraper):
     def __init__(self, num_page_to_scrape=10, data_dir='./data/shopee', wait_timeout=5, retry_num=3,
-                 restart_num=20, is_headless=False):
+                 restart_num=20, is_headless=False, consumer_id=None):
         if not os.path.exists(data_dir):
             os.mkdir(data_dir)
         main_page = "https://shopee.vn/"
-        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page, 'test')
+        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page,
+                         'shopee_info', 'shopee_url', 'shopee_scraper', consumer_id)
 
     def get_product_urls(self):
         for cat_1 in os.listdir(self.data_dir):
@@ -91,86 +92,81 @@ class ShopeeScraper(CommonScraper):
     def _get_product_urls(self, product_list, category):
         for product in product_list:
             product_url = 'https://shopee.vn' + product.a['href']
-            self.write_to_file(product_url, os.path.join(category, 'url.txt'))
+            # self.write_to_file(product_url, os.path.join(category, 'url.txt'))
+            d = {
+                'category': category,
+                'url': product_url
+            }
+            self.send_to_kafka(d, 'url')
 
     def get_product_info(self):
-        for cat_1 in os.listdir(self.data_dir):
-            full_cat_1 = os.path.join(self.data_dir, cat_1)
-            for cat_2 in os.listdir(full_cat_1):
-                full_cat_2 = os.path.join(full_cat_1, cat_2)
-                with open(os.path.join(full_cat_2, 'base_url.txt')) as f:
-                    d = json.load(f)
-                category = d['category']
+        logger.info(f"Consuming from {self.url_topic}")
+        while True:
+            logger.info("Polling for messages")
+            result = self.url_consumer.poll(timeout_ms=1000, max_records=1)
+            if result:
+                logger.info("Message found")
+                records = list(result.values())[0]
+                for record in records:
+                    logger.info(f"Record: {record.value}")
+                    d = json.loads(record.value)
+                    category = d['category']
+                    url = d['url']
+                    logger.info('Scraping category: ' + category)
 
-                logger.info('Scraping category: ' + category)
-                category_path = os.path.join(self.data_dir, category)
-                url_path = os.path.join(category_path, 'url.txt')
+                    url = url.strip()
+                    self.driver.get(url)
 
-                done = self.check_done_info(category_path)
-                if done:  # skip this category if all url are scraped
-                    logger.info(f"Category \"{category}\" is scraped already, skipping")
-                    continue
-                with open(url_path) as urls:
-                    for i, url in enumerate(urls):
-                        if i < self.get_curr_url_num(category_path):  # continue scraping from the last scraped url
-                            logger.info(f"Url number \"{i}\" is scraped already, skipping")
-                            continue
+                    try:
+                        # get all product types
+                        type_arr = []
+                        WebDriverWait(self.driver, self.wait_timeout).until(
+                            ec.visibility_of_element_located((By.CLASS_NAME, 'flex.rY0UiC.j9be9C')))
+                        type_ele = self.driver.find_element(By.CLASS_NAME, 'flex.rY0UiC.j9be9C')
+                        logger.info('Product types found, iterating through each type...')
+                        for retry in range(self.retry_num):
+                            try:
+                                # grab all product type button into an array
+                                for counter, attr in enumerate(
+                                        type_ele.find_elements(By.XPATH,
+                                                               './div/div[@class=\'flex items-center\']')):
+                                    buttons = attr.find_elements(By.XPATH,
+                                                                 './div/button[@class=\'product-variation\']')
+                                    if len(buttons) == 0:
+                                        logger.info(
+                                            f'Attribute number {counter} has no clickable buttons, skipping this attribute')
+                                        continue
+                                    type_arr.append(buttons)
+                                logger.info(f'{len(type_arr)} types found, iterating through all of them')
+                                self._iterate_all_product_type(0, type_arr, url=url)
+                                break
 
-                        self.log_curr_url_num(category_path, i)
-                        url = url.strip()
-                        logger.info(f'Scraping url number {i}: {url}')
-                        if i != 0 and i % self.restart_num == 0:
-                            logger.info('Restart number reached, restarting driver')
-                            self.restart_driver()
-                        self.driver.get(url)
+                            except StaleElementReferenceException:
+                                logger.info('Cannot get product types, retrying')
 
-                        try:
-                            # get all product types
-                            type_arr = []
-                            WebDriverWait(self.driver, self.wait_timeout).until(
-                                ec.visibility_of_element_located((By.CLASS_NAME, 'flex.rY0UiC.j9be9C')))
-                            type_ele = self.driver.find_element(By.CLASS_NAME, 'flex.rY0UiC.j9be9C')
-                            logger.info('Product types found, iterating through each type...')
-                            for retry in range(self.retry_num):
-                                try:
-                                    # grab all product type button into an array
-                                    for counter, attr in enumerate(
-                                            type_ele.find_elements(By.XPATH, './div/div[@class=\'flex items-center\']')):
-                                        buttons = attr.find_elements(By.XPATH, './div/button[@class=\'product-variation\']')
-                                        if len(buttons) == 0:
-                                            logger.info(
-                                                f'Attribute number {counter} has no clickable buttons, skipping this attribute')
-                                            continue
-                                        type_arr.append(buttons)
-                                    logger.info(f'{len(type_arr)} types found, iterating through all of them')
-                                    self._iterate_all_product_type(0, type_arr, url=url, category_path=category_path)
-                                    break
+                            if retry == self.retry_num - 1:
+                                logger.info(f'Cannot get product types after {self.retry_num} attempts')
+                                self._get_product_info_helper(url)
+                    except TimeoutException:
+                        logger.info('Product has no type, scraping directly')
+                        self._get_product_info_helper(url)
 
-                                except StaleElementReferenceException:
-                                    logger.info('Cannot get product types, retrying')
+                    except Exception as e:
+                        logger.error(e)
 
-                                if retry == self.retry_num - 1:
-                                    logger.info(f'Cannot get product types after {self.retry_num} attempts')
-                                    self._get_product_info_helper(url, category_path)
-                        except TimeoutException:
-                            logger.info('Product has no type, scraping directly')
-                            self._get_product_info_helper(url, category_path)
-
-                        except Exception as e:
-                            logger.error(e)
-
-                    self.log_done_info(category_path)
+            else:
+                logger.info('No message found in buffer')
 
     def _iterate_all_product_type(self, type_index, type_arr, **kwargs):
         if type_index == len(type_arr):
-            self._get_product_info_helper(kwargs['url'], kwargs['category_path'])
+            self._get_product_info_helper(kwargs['url'])
             return
 
         for element in type_arr[type_index]:
             element.click()
-            self._iterate_all_product_type(type_index + 1, type_arr, url=kwargs['url'], category_path=kwargs['category_path'])
+            self._iterate_all_product_type(type_index + 1, type_arr, url=kwargs['url'])
 
-    def _get_product_info_helper(self, curr_url, category_path):
+    def _get_product_info_helper(self, curr_url):
         try:
             result = {}
 
@@ -246,6 +242,6 @@ class ShopeeScraper(CommonScraper):
             #     json.dump(result, f, ensure_ascii=False)
             #     f.write('\n')
 
-            self.send_to_kafka(result)
+            self.send_to_kafka(result, 'info')
         except (NoSuchElementException, TimeoutException) as e:
             logger.error(e)

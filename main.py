@@ -33,6 +33,8 @@ if __name__ == '__main__':
                         help='What kind of data to scrape. Values can be url or info')
     parser.add_argument('--num_page', type=int,
                         help='How many pages to scrape urls from. Only effective when type is url')
+    parser.add_argument('--consumer-id', type=str,
+                        help='The client id of the consumer. Only effective when type is info')
     parser.add_argument('--headless', action='store_true',
                         help='Run browser in the background')
     parser.add_argument('--login', action='store_true',
@@ -42,9 +44,9 @@ if __name__ == '__main__':
 
     if args.site == 'shopee':
         if args.num_page:
-            scraper = ShopeeScraper(num_page_to_scrape=args.num_page, is_headless=args.headless)
+            scraper = ShopeeScraper(num_page_to_scrape=args.num_page, is_headless=args.headless, consumer_id=args.consumer_id)
         else:
-            scraper = ShopeeScraper(is_headless=args.headless)
+            scraper = ShopeeScraper(is_headless=args.headless, consumer_id=args.consumer_id)
 
         if args.login:
             scraper.get_main_page()
@@ -56,9 +58,9 @@ if __name__ == '__main__':
 
     elif args.site == 'lazada':
         if args.num_page:
-            scraper = LazadaScraper(num_page_to_scrape=args.num_page, is_headless=args.headless)
+            scraper = LazadaScraper(num_page_to_scrape=args.num_page, is_headless=args.headless, consumer_id=args.consumer_id)
         else:
-            scraper = LazadaScraper(is_headless=args.headless)
+            scraper = LazadaScraper(is_headless=args.headless, consumer_id=args.consumer_id)
 
         if args.login:
             scraper.get_main_page()

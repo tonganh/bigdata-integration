@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 
 class LazadaScraper(CommonScraper):
     def __init__(self, num_page_to_scrape=10, data_dir='./data/lazada', wait_timeout=5, retry_num=3,
-                 restart_num=10, is_headless=False):
+                 restart_num=10, is_headless=False, consumer_id=None):
         if not os.path.exists(data_dir):
             os.mkdir(data_dir)
         main_page = 'https://www.lazada.vn/'
-        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page, 'lazada')
+        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page,
+                         'lazada_info', 'lazada_url', 'lazada_scraper', consumer_id)
 
     def get_product_urls(self):
         # go through all categories
@@ -76,7 +77,12 @@ class LazadaScraper(CommonScraper):
                         for product in products:
                             url = product.find('a')['href'][2:]
                             url = 'https://' + url
-                            self.write_to_file(url, os.path.join(category, 'url.txt'))
+                            d = {
+                                'category': category,
+                                'url': url
+                            }
+                            # self.write_to_file(url, os.path.join(category, 'url.txt'))
+                            self.send_to_kafka(d, 'url')
                         logger.info("Finished scraping urls from page " + str(counter))
 
                         # WebDriverWait(self.driver, self.wait_timeout).until(
@@ -97,88 +103,69 @@ class LazadaScraper(CommonScraper):
                             self.check_popup()
 
     def get_product_info(self, scroll_retry=3):
-        for cat_1 in os.listdir(self.data_dir):
-            full_cat_1 = os.path.join(self.data_dir, cat_1)
-            for cat_2 in os.listdir(full_cat_1):
-                full_cat_2 = os.path.join(full_cat_1, cat_2)
-                for cat_3 in os.listdir(full_cat_2):
-                    full_cat_3 = os.path.join(full_cat_2, cat_3)
-                    with open(os.path.join(full_cat_3, 'base_url.txt')) as f:
-                        d = json.load(f)
+        logger.info(f"Consuming from {self.url_topic}")
+        while True:
+            logger.info("Polling for messages")
+            result = self.url_consumer.poll(timeout_ms=1000, max_records=1)
+            if result:
+                logger.info("Message found")
+                records = list(result.values())[0]
+                for record in records:
+                    logger.info(f"Record: {record.value}")
+                    d = json.loads(record.value)
                     category = d['category']
-
+                    url = d['url'].strip()
                     logger.info('Scraping category: ' + category)
-                    category_path = os.path.join(self.data_dir, category)
-                    url_path = os.path.join(category_path, 'url.txt')
 
-                    done = self.check_done_info(category_path)
-                    if done:  # skip this category if all url are scraped
-                        logger.info(f"Category \"{category}\" is scraped already, skipping")
+                    page_loaded = False
+                    for retry in range(self.retry_num):
+                        try:
+                            self.driver.get(url)
+                            page_loaded = True
+                            break
+                        except TimeoutException:
+                            if retry == self.retry_num - 1:
+                                logger.error(f'Cannot load the website after {self.retry_num} retries')
+                            else:
+                                logger.error("Cannot load the website, retrying")
+
+                    if not page_loaded:
                         continue
-                    with open(url_path) as urls:
-                        for i, url in enumerate(urls):
-                            if i < self.get_curr_url_num(category_path):  # continue scraping from the last scraped url
-                                logger.info(f"Url number \"{i}\" is scraped already, skipping")
-                                continue
 
-                            self.log_curr_url_num(category_path, i)
-
-                            url = url.strip()
-                            logger.info(f'Scraping url number {i}: {url}')
-                            if i != 0 and i % self.restart_num == 0:
-                                logger.info('Restart number reached, restarting driver')
-                                self.restart_driver()
-
-                            page_loaded = False
-                            for retry in range(self.retry_num):
-                                try:
-                                    self.driver.get(url)
-                                    page_loaded = True
-                                    break
-                                except TimeoutException:
-                                    if retry == self.retry_num - 1:
-                                        logger.error(f'Cannot load the website after {self.retry_num} retries')
-                                    else:
-                                        logger.error("Cannot load the website, retrying")
-
-                            if not page_loaded:
-                                continue
-
+                    try:
+                        # get all product types
+                        type_arr = []
+                        WebDriverWait(self.driver, self.wait_timeout).until(
+                            ec.visibility_of_element_located((By.CLASS_NAME, 'sku-prop-content')))
+                        for retry in range(self.retry_num):
                             try:
-                                # get all product types
-                                type_arr = []
-                                WebDriverWait(self.driver, self.wait_timeout).until(
-                                    ec.visibility_of_element_located((By.CLASS_NAME, 'sku-prop-content')))
-                                for retry in range(self.retry_num):
-                                    try:
-                                        for ele in self.driver.find_elements(By.CLASS_NAME, 'sku-prop-content'):
-                                            type_arr.append(ele.find_elements(By.XPATH, './*'))
-                                        logger.info(f'{len(type_arr)} types found, iterating through all of them')
-                                        self._iterate_all_product_type(0, type_arr, scroll_retry=scroll_retry, url=url,
-                                                                       category_path=category_path, category=category)
-                                        break
-                                    # except IndexError as e:
-                                    #     logger.error(e)
-                                    #     break
-                                    except StaleElementReferenceException:
-                                        logger.error('Cannot get product types, retrying')
-                                    except Exception as e:
-                                        logger.error(e)
-                                        self.check_popup()
-                                        break
-                                    if retry == self.retry_num - 1:
-                                        logger.info(f'Cannot get product types after {self.retry_num} attempts')
-                                        self._get_product_info_helper(scroll_retry, url, category_path, category)
-                            except TimeoutException:
-                                logger.info('Product has no type, scraping directly')
-                                self._get_product_info_helper(scroll_retry, url, category_path, category)
-
+                                for ele in self.driver.find_elements(By.CLASS_NAME, 'sku-prop-content'):
+                                    type_arr.append(ele.find_elements(By.XPATH, './*'))
+                                logger.info(f'{len(type_arr)} types found, iterating through all of them')
+                                self._iterate_all_product_type(0, type_arr, scroll_retry=scroll_retry, url=url, category=category)
+                                break
+                            # except IndexError as e:
+                            #     logger.error(e)
+                            #     break
+                            except StaleElementReferenceException:
+                                logger.error('Cannot get product types, retrying')
                             except Exception as e:
                                 logger.error(e)
+                                self.check_popup()
+                                break
+                            if retry == self.retry_num - 1:
+                                logger.info(f'Cannot get product types after {self.retry_num} attempts')
+                                self._get_product_info_helper(scroll_retry, url, category)
+                    except TimeoutException:
+                        logger.info('Product has no type, scraping directly')
+                        self._get_product_info_helper(scroll_retry, url, category)
 
-                    self.log_done_info(category_path)
+                    except Exception as e:
+                        logger.error(e)
+        else:
+            logger.info('No message found in buffer')
 
-    def _get_product_info_helper(self, scroll_retry, curr_url, category_path, category):
+    def _get_product_info_helper(self, scroll_retry, curr_url, category):
         try:
             result = {}
 
@@ -259,7 +246,7 @@ class LazadaScraper(CommonScraper):
             #     json.dump(result, f, ensure_ascii=False)
             #     f.write('\n')
 
-            self.send_to_kafka(result)
+            self.send_to_kafka(result, 'info')
         except AttributeError as e:
             logger.error(e)
 
@@ -304,8 +291,7 @@ class LazadaScraper(CommonScraper):
 
     def _iterate_all_product_type(self, type_index, type_arr, **kwargs):
         if type_index == len(type_arr):
-            self._get_product_info_helper(kwargs['scroll_retry'], kwargs['url'],
-                                          kwargs['category_path'], kwargs['category'])
+            self._get_product_info_helper(kwargs['scroll_retry'], kwargs['url'], kwargs['category'])
             return
 
         for element in type_arr[type_index]:
@@ -324,7 +310,7 @@ class LazadaScraper(CommonScraper):
                 WebDriverWait(self.driver, self.wait_timeout).until(ec.element_to_be_clickable(element))
                 element.click()
                 self._iterate_all_product_type(type_index + 1, type_arr, scroll_retry=kwargs['scroll_retry'],
-                                               url=kwargs['url'], category_path=kwargs['category_path'],
+                                               url=kwargs['url'],
                                                category=kwargs['category'])
             except StaleElementReferenceException:
                 logger.info('Element not attached to the page, renewing all elements')

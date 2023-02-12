@@ -4,15 +4,21 @@ import os
 from abc import abstractmethod, ABC
 
 import undetected_chromedriver as uc
-from kafka import KafkaProducer
+from kafka import KafkaProducer, KafkaConsumer
 
 logger = logging.getLogger(__name__)
+<<<<<<< HEAD
 BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093', 'localhost:9094']
+=======
+# BOOTSTRAP_SERVERS = ['viet:9092', 'jazzdung:9093', 'dungbruh:9094']
+BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093']
+>>>>>>> kafka
 
 
 class CommonScraper(ABC):
 
-    def __init__(self, num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page, topic):
+    def __init__(self, num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page,
+                 info_topic, url_topic, consumer_group, consumer_id):
         self.restart_num = restart_num
         self.num_page_to_scrape = num_page_to_scrape
         self.data_dir = data_dir
@@ -20,8 +26,10 @@ class CommonScraper(ABC):
         self.retry_num = retry_num
         self.is_headless = is_headless
         self.main_page = main_page
+        self.info_topic = info_topic
+        self.url_topic = url_topic
         self.driver = self.start_driver()
-        self.producer = KafkaProducer(
+        self.url_producer = KafkaProducer(
             bootstrap_servers=BOOTSTRAP_SERVERS,
             # key_serializer=str.encode,
             value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode('utf-8'),
@@ -30,7 +38,22 @@ class CommonScraper(ABC):
             acks=1,
             request_timeout_ms=1000
         )
-        self.topic = topic
+        self.info_producer = KafkaProducer(
+            bootstrap_servers=BOOTSTRAP_SERVERS,
+            # key_serializer=str.encode,
+            value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode('utf-8'),
+            batch_size=1000,
+            linger_ms=5,
+            acks=1,
+            request_timeout_ms=1000
+        )
+        self.url_consumer = KafkaConsumer(
+                    bootstrap_servers=BOOTSTRAP_SERVERS,
+                    value_deserializer=lambda v: v.decode('utf-8'),
+                    group_id="url_scraper",
+                    client_id=consumer_id
+                )
+        self.url_consumer.subscribe(self.url_topic)
 
     def get_main_page(self):
         self.driver.get(self.main_page)
@@ -46,7 +69,8 @@ class CommonScraper(ABC):
         if not os.path.exists("./profile"):
             os.mkdir("./profile")
 
-        driver = uc.Chrome(options=options, user_data_dir="./profile")
+        # driver = uc.Chrome(options=options, user_data_dir="./profile")
+        driver = uc.Chrome(options=options)
         driver.set_script_timeout(10)
         driver.set_page_load_timeout(20)
         driver.maximize_window()
@@ -93,11 +117,17 @@ class CommonScraper(ABC):
         self.driver = self.start_driver()
         logger.info('Driver restarted')
 
-    def send_to_kafka(self, value):
-        self.producer.send(
-            topic=self.topic,
-            value=value
-        )
+    def send_to_kafka(self, value, mode):
+        if mode == 'url':
+            self.url_producer.send(
+                topic=self.url_topic,
+                value=value
+            )
+        elif mode == 'info':
+            self.info_producer.send(
+                topic=self.info_topic,
+                value=value
+            )
 
     # def __del__(self):
     #     self.driver.quit()
