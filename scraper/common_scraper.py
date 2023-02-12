@@ -7,12 +7,8 @@ import undetected_chromedriver as uc
 from kafka import KafkaProducer, KafkaConsumer
 
 logger = logging.getLogger(__name__)
-<<<<<<< HEAD
-BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093', 'localhost:9094']
-=======
-# BOOTSTRAP_SERVERS = ['viet:9092', 'jazzdung:9093', 'dungbruh:9094']
-BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093']
->>>>>>> kafka
+BOOTSTRAP_SERVERS = ['viet:9092', 'jazzdung:9093', 'dungbruh:9094']
+# BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093']
 
 
 class CommonScraper(ABC):
