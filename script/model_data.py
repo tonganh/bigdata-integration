@@ -58,7 +58,7 @@ def load_lazada(path):
         StructField("shop_name", StringType(), True), 
         StructField("shop_rating", DoubleType(), True), 
         StructField("ship_on_time", DoubleType(), True), 
-        StructField("shop_reply_percectage", DoubleType(), True)
+        StructField("shop_reply_percentage", DoubleType(), True)
     ])
 
     df = spark.read.format("csv").schema(schema).load(path)
@@ -71,7 +71,7 @@ def fill_with_mean(df):
     columns = ['avg_rating', 
                 'shop_rating', 
                 'ship_on_time', 
-                'shop_reply_percectage', 
+                'shop_reply_percentage', 
                 'num_review', 'num_sold', 
                 'shop_num_review', 
                 'shop_reply_percentage', 

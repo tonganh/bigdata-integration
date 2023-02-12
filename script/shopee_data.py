@@ -170,7 +170,7 @@ def extract_shop_num_review(df):
     return df.withColumn('shop_num_review', shop_num_review)
 
 
-def extract_shop_reply_percectage(df):
+def extract_shop_reply_percentage(df):
     shop_reply_percentage = regexp_extract(col('shop_info'), 'Tỉ Lệ Phản Hồi\n(.+)\n', 1)
     shop_reply_percentage = regexp_replace(shop_reply_percentage, '%', '')
     shop_reply_percentage = shop_reply_percentage.cast('float') / 100
@@ -245,7 +245,7 @@ def get_full_data(origin, destination):
     df = extract_shop_name(df)
     df = extract_shop_like_tier(df)
     df = extract_shop_num_review(df)
-    df = extract_shop_reply_percectage(df)
+    df = extract_shop_reply_percentage(df)
     df = extract_shop_reply_time(df)
     df = extract_shop_creation_time(df)
     df = extract_shop_num_follower(df)
