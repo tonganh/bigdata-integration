@@ -1,16 +1,18 @@
+import json
 import logging
 import os
-import time
 from abc import abstractmethod, ABC
 
 import undetected_chromedriver as uc
+from kafka import KafkaProducer
 
 logger = logging.getLogger(__name__)
+BOOTSTRAP_SERVERS = ['localhost:9092', 'localhost:9093', 'localhost:9094']
 
 
 class CommonScraper(ABC):
 
-    def __init__(self, num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page):
+    def __init__(self, num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page, topic):
         self.restart_num = restart_num
         self.num_page_to_scrape = num_page_to_scrape
         self.data_dir = data_dir
@@ -19,6 +21,16 @@ class CommonScraper(ABC):
         self.is_headless = is_headless
         self.main_page = main_page
         self.driver = self.start_driver()
+        self.producer = KafkaProducer(
+            bootstrap_servers=BOOTSTRAP_SERVERS,
+            # key_serializer=str.encode,
+            value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode('utf-8'),
+            batch_size=1000,
+            linger_ms=5,
+            acks=1,
+            request_timeout_ms=1000
+        )
+        self.topic = topic
 
     def get_main_page(self):
         self.driver.get(self.main_page)
@@ -30,10 +42,10 @@ class CommonScraper(ABC):
         options.set_capability("pageLoadStrategy", "none")
         if self.is_headless:
             options.headless = True
-        
+
         if not os.path.exists("./profile"):
             os.mkdir("./profile")
-        
+
         driver = uc.Chrome(options=options, user_data_dir="./profile")
         driver.set_script_timeout(10)
         driver.set_page_load_timeout(20)
@@ -80,6 +92,12 @@ class CommonScraper(ABC):
         self.driver.quit()
         self.driver = self.start_driver()
         logger.info('Driver restarted')
+
+    def send_to_kafka(self, value):
+        self.producer.send(
+            topic=self.topic,
+            value=value
+        )
 
     # def __del__(self):
     #     self.driver.quit()

@@ -3,6 +3,10 @@ import argparse
 from scraper.lazada_scraper import LazadaScraper
 from scraper.shopee_scraper import ShopeeScraper
 
+
+import os
+os.chdir(os.path.dirname(__file__))
+
 logger = logging.getLogger('scraper')
 logger.setLevel(logging.INFO)
 

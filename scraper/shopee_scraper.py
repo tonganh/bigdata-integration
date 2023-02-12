@@ -20,7 +20,7 @@ class ShopeeScraper(CommonScraper):
         if not os.path.exists(data_dir):
             os.mkdir(data_dir)
         main_page = "https://shopee.vn/"
-        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page)
+        super().__init__(num_page_to_scrape, data_dir, wait_timeout, retry_num, restart_num, is_headless, main_page, 'test')
 
     def get_product_urls(self):
         for cat_1 in os.listdir(self.data_dir):
@@ -242,8 +242,10 @@ class ShopeeScraper(CommonScraper):
             result['attrs'] = attrs
             result['url'] = curr_url
 
-            with open(os.path.join(category_path, 'product.ndjson'), 'a') as f:
-                json.dump(result, f, ensure_ascii=False)
-                f.write('\n')
+            # with open(os.path.join(category_path, 'product.ndjson'), 'a') as f:
+            #     json.dump(result, f, ensure_ascii=False)
+            #     f.write('\n')
+
+            self.send_to_kafka(result)
         except (NoSuchElementException, TimeoutException) as e:
             logger.error(e)
