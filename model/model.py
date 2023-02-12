@@ -1,5 +1,3 @@
-import sklearn
-import pandas as pd
 from pyspark.mllib.feature import HashingTF, IDF
 from pyspark.ml import Pipeline
 import os
@@ -8,22 +6,18 @@ from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer, CountVectorizer
 from pyspark.ml.feature import StringIndexer, OneHotEncoder
 
-from pyspark.ml.feature import MinMaxScaler, StandardScaler
+from pyspark.ml.feature import MinMaxScaler
 from pyspark.ml.feature import VectorAssembler
 
-from pyspark.ml.feature import Imputer
 from pyspark.sql.types import DoubleType
 
 
 from pyspark.ml.regression import RandomForestRegressor
 
-from pyspark.ml.regression import LinearRegression, LinearRegressionSummary
+from pyspark.ml.regression import LinearRegression
 
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 
-from pyspark.sql.functions import col
-from pyspark.sql.functions import log
-from math import log10
 from pyspark.ml import PipelineModel
 import pyspark.sql.functions as F
 import numpy as np
@@ -40,7 +34,6 @@ from pyspark.ml.regression import RandomForestRegressor, GBTRegressor
 
 def calculate_rmsle(result_df,labelCol="price", predictionCol="prediction"):
     import numpy as np
-    from sklearn.metrics import mean_squared_log_error
     
     label = np.array(result_df.select(labelCol).collect())
     prediction = np.array(result_df.select(predictionCol).collect())
@@ -54,7 +47,7 @@ class Model_Pipeline():
                text_process_method = 'tf-idf',
               text_attr ='name_description',
               cat_attrs = [  'first_category', 'second_category', 'third_category', 'shop_name','brand'],
-              num_attrs = [ 'shop_reply_percectage']):
+              num_attrs = [ 'shop_reply_percentage']):
     
     self.save_dir = save_dir
     if not os.path.exists(self.save_dir):

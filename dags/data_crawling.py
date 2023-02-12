@@ -28,8 +28,8 @@ with DAG(
 
     task_create_raw_folder = BashOperator(
         task_id='create_today_raw_folder',
-        bash_command='HADOOP_USER_NAME=hadoop /home/jazzdung/hadoop/bin/hdfs dfs -mkdir /user/hadoop/raw/{{ params.date }}',
-        params = {'date' : get_this_week()}
+        bash_command='HADOOP_USER_NAME=hadoop /home/jazzdung/hadoop/bin/hdfs dfs -mkdir /user/hadoop/raw/{{ params.week }}',
+        params = {'week' : get_this_week()}
     )
 
     task_crawl_shopee_url = BashOperator(
@@ -42,14 +42,36 @@ with DAG(
         bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site lazada --type url --num_page 1'
     )
 
-    task_crawl_shopee_data = BashOperator(
-        task_id='crawl_shopee_data',
-        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site shopee --type info'
+    task_crawl_shopee_data_1 = BashOperator(
+        task_id='crawl_shopee_data_1',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site shopee --type info --consumer_id 1'
     )
 
-    task_crawl_lazada_data = BashOperator(
-        task_id='crawl_lazada_data',
-        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site lazada --type info'
+    task_crawl_shopee_data_2 = BashOperator(
+        task_id='crawl_shopee_data_2',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site shopee --type info --consumer_id 2'
     )
 
-    task_create_raw_folder >> [task_crawl_shopee_url , task_crawl_shopee_data, task_crawl_lazada_url, task_crawl_lazada_data]
+    task_crawl_lazada_data_1 = BashOperator(
+        task_id='crawl_lazada_data_1',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site lazada --type info --consumer_id 1'
+    )
+
+    task_crawl_lazada_data_2 = BashOperator(
+        task_id='crawl_lazada_data_2',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site lazada --type info --consumer_id 2'
+    )
+
+    task_lazada_kafka = BashOperator(
+        task_id='lazada_kafka',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic lazada_info --tmp_file /home/jazzdung/tmp_lazada --destination hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/lazada_raw.ndjson',
+        params = {'week' : get_this_week()}
+    )
+
+    task_shopee_kafka = BashOperator(
+        task_id='shopee_kafka',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic shopee_info --tmp_file /home/jazzdung/tmp_lazada --destination hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/shopee_raw.ndjson',
+        params = {'week' : get_this_week()}
+    )
+
+    task_create_raw_folder >> [task_crawl_shopee_url , task_crawl_shopee_data_1, task_crawl_shopee_data_2, task_crawl_lazada_url, task_crawl_lazada_data_1, task_crawl_lazada_data_2, task_lazada_kafka, task_shopee_kafka]
