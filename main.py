@@ -33,7 +33,7 @@ if __name__ == '__main__':
                         help='What kind of data to scrape. Values can be url or info')
     parser.add_argument('--num_page', type=int,
                         help='How many pages to scrape urls from. Only effective when type is url')
-    parser.add_argument('--consumer-id', type=str,
+    parser.add_argument('--consumer_id', type=str,
                         help='The client id of the consumer. Only effective when type is info')
     parser.add_argument('--headless', action='store_true',
                         help='Run browser in the background')

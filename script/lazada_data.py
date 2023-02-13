@@ -152,12 +152,12 @@ def extract_ship_on_time(df):
     ship_on_time = ship_on_time.cast('float') / 100
     return df.withColumn('ship_on_time', ship_on_time)
 
-def extract_shop_reply_percectage(df):
+def extract_shop_reply_percentage(df):
     shop_info = col('shop_info')
-    shop_reply_percectage = regexp_extract(shop_info, 'Chat Response\\n(.+?)\\n', 1)
-    shop_reply_percectage = regexp_replace(shop_reply_percectage, '%', '')
-    shop_reply_percectage = shop_reply_percectage.cast('float') / 100
-    return df.withColumn('shop_reply_percectage', shop_reply_percectage)
+    shop_reply_percentage = regexp_extract(shop_info, 'Chat Response\\n(.+?)\\n', 1)
+    shop_reply_percentage = regexp_replace(shop_reply_percentage, '%', '')
+    shop_reply_percentage = shop_reply_percentage.cast('float') / 100
+    return df.withColumn('shop_reply_percentage', shop_reply_percentage)
 
 def write_file(df, destination):
 
@@ -188,7 +188,7 @@ def get_full_data(origin, destination):
     df = extract_shop_name(df)
     df = extract_shop_rating(df)
     df = extract_ship_on_time(df)
-    df = extract_shop_reply_percectage(df)
+    df = extract_shop_reply_percentage(df)
 
     # Cast
     df = df.withColumn("avg_rating",df["avg_rating"].cast('double'))
