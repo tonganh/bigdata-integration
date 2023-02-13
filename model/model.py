@@ -46,7 +46,7 @@ class Model_Pipeline():
                seed,
                text_process_method = 'tf-idf',
               text_attr ='name_description',
-              cat_attrs = [  'first_category', 'second_category', 'third_category', 'shop_name','brand'],
+              cat_attrs = [ 'second_category', 'third_category', 'shop_name','brand'],
               num_attrs = [ 'shop_reply_percentage']):
     
     self.save_dir = save_dir
@@ -390,6 +390,8 @@ if __name__ == '__main__':
     
     elif mode == 'inference':
       test_df = df
+    
+    test_df.show()
 
     result_df = model_pipeline.predict(test_df)
     model_pipeline.evaluate(result_df)

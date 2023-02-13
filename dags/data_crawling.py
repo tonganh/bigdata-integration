@@ -32,6 +32,12 @@ with DAG(
         params = {'week' : get_this_week()}
     )
 
+    task_grant_access = BashOperator(
+        task_id='grant_access',
+        bash_command='HADOOP_USER_NAME=hadoop /home/jazzdung/hadoop/bin/hdfs dfs -chown -R jazzdung /user/hadoop/raw/{{ params.week }}',
+        params = {'week' : get_this_week()}
+    )
+
     task_crawl_shopee_url = BashOperator(
         task_id='crawl_shopee_url',
         bash_command='python3 /home/jazzdung/E-Commerce-Support-System/main.py --site shopee --type url --num_page 1'
@@ -64,14 +70,14 @@ with DAG(
 
     task_lazada_kafka = BashOperator(
         task_id='lazada_kafka',
-        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic lazada_info --tmp_file /home/jazzdung/tmp_lazada --destination hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/lazada_raw.ndjson',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic lazada_info --tmp_file /home/jazzdung/tmp_lazada --dest hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/lazada_raw.ndjson',
         params = {'week' : get_this_week()}
     )
 
     task_shopee_kafka = BashOperator(
         task_id='shopee_kafka',
-        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic shopee_info --tmp_file /home/jazzdung/tmp_lazada --destination hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/shopee_raw.ndjson',
+        bash_command='python3 /home/jazzdung/E-Commerce-Support-System/script/hdfs_consumer.py --topic shopee_info --tmp_file /home/jazzdung/tmp_shopee --dest hdfs://viet:9000/user/hadoop/raw/{{ params.week }}/shopee_raw.ndjson',
         params = {'week' : get_this_week()}
     )
 
-    task_create_raw_folder >> [task_crawl_shopee_url , task_crawl_shopee_data_1, task_crawl_shopee_data_2, task_crawl_lazada_url, task_crawl_lazada_data_1, task_crawl_lazada_data_2, task_lazada_kafka, task_shopee_kafka]
+    task_create_raw_folder >> task_grant_access >> [task_crawl_shopee_url , task_crawl_shopee_data_1, task_crawl_shopee_data_2, task_crawl_lazada_url, task_crawl_lazada_data_1, task_crawl_lazada_data_2, task_lazada_kafka, task_shopee_kafka]
