@@ -16,15 +16,21 @@ product. In addition, we’d like to provide sellers with various visualizations
 
 The data are obtained through e-commerce websites (Lazada and Shopee), which are then used to perform price analysis and train price-prediction models.
 
-## Overall architecture
+## Architecture
 <p align="center">
-  <img width="700" alt="ingest dag" src="images/architecture.png">
+  <img width="700" alt="architecture" src="images/architecture.png">
 </p>
 
 ### Ingestion overview
 <p align="center">
-  <img width="700" alt="ingest dag" src="images/ingestion.png">
+  <img width="700" alt="ingestion" src="images/ingestion.png">
 </p>
+
+There are 2 kinds of the scraper:
+- URL scraper: goes through each categories' web page and extracts the product page URL, which will be used by the second scraper: info scraper
+- Info scraper: given a product page URL, extracts various product information
+
+URL scraper will publish the urls to their respective url topics, which is consumed by a number of info scrapers. Then, these scrapers will get the product info from the url and publish them to the info topics. Lastly, the raw data will be consumed into HDFS for storage.
 
 ### Data pipelines
 #### [Ingestion](dags/data_crawling.py)
@@ -34,7 +40,12 @@ The data are obtained through e-commerce websites (Lazada and Shopee), which are
 
 #### [Processing](dags/data_processing.py)
 <p align="center">
-  <img width="600" alt="ingest dag" src="images/processing_dag.png">
+  <img width="600" alt="processing dag" src="images/processing_dag.png">
+</p>
+
+## Dashboard
+<p align="center">
+  <img width="600" alt="processing dag" src="images/dashboard.png">
 </p>
 
 ## Dependencies
