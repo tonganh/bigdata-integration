@@ -18,12 +18,12 @@ The data are obtained through e-commerce websites (Lazada and Shopee), which are
 
 ## Architecture
 <p align="center">
-  <img width="700" alt="architecture" src="images/architecture.png">
+  <img width="700" alt="architecture" src="assets/architecture.png">
 </p>
 
 ### Ingestion overview
 <p align="center">
-  <img width="700" alt="ingestion" src="images/ingestion.png">
+  <img width="700" alt="ingestion" src="assets/ingestion.png">
 </p>
 
 There are 2 kinds of the scraper:
@@ -35,17 +35,17 @@ URL scraper will publish the urls to their respective url topics, which is consu
 ### Data pipelines
 #### [Ingestion](dags/data_crawling.py)
 <p align="center">
-  <img width="400" alt="ingest dag" src="images/ingest_dag.png">
+  <img width="400" alt="ingest dag" src="assets/ingest_dag.png">
 </p>
 
 #### [Processing](dags/data_processing.py)
 <p align="center">
-  <img width="600" alt="processing dag" src="images/processing_dag.png">
+  <img width="600" alt="processing dag" src="assets/processing_dag.png">
 </p>
 
 ## Dashboard
 <p align="center">
-  <img width="800" alt="processing dag" src="images/dashboard.png">
+  <img width="800" alt="processing dag" src="assets/dashboard.png">
 </p>
 
 ## Dependencies
