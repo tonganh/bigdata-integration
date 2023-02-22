@@ -45,7 +45,7 @@ URL scraper will publish the urls to their respective url topics, which is consu
 
 ## Dashboard
 <p align="center">
-  <img width="600" alt="processing dag" src="images/dashboard.png">
+  <img width="800" alt="processing dag" src="images/dashboard.png">
 </p>
 
 ## Dependencies
