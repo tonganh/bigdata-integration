@@ -16,6 +16,9 @@ product. In addition, we’d like to provide sellers with various visualizations
 
 The data are obtained through e-commerce websites (Lazada and Shopee), which are then used to perform price analysis and train price-prediction models.
 
+## Overall architecture
+![Alt text](./images/architecture.png)
+
 ## Dependencies
 - chrome
 - python packages: `pip install -r requirements.txt`
