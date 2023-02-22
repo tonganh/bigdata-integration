@@ -48,7 +48,7 @@ After the ingestion step, the raw data will be processed to serve the downstream
 
 ## Dashboard
 <p align="center">
-  <img width="800" alt="processing dag" src="assets/dashboard.png">
+  <img width="800" alt="dashboard" src="assets/dashboard.png">
 </p>
 
 ## Dependencies
