@@ -23,7 +23,7 @@ The data are obtained through e-commerce websites (Lazada and Shopee), which are
 
 ### Ingestion overview
 <p align="center">
-  <img width="700" alt="ingestion" src="assets/ingestion.png">
+  <img width="500" alt="ingestion" src="assets/ingestion.png">
 </p>
 
 There are 2 kinds of the scraper:
@@ -33,12 +33,15 @@ There are 2 kinds of the scraper:
 URL scraper will publish the urls to their respective url topics, which is consumed by a number of info scrapers. Then, these scrapers will get the product info from the url and publish them to the info topics. Lastly, the raw data will be consumed into HDFS for storage.
 
 ### Data pipelines
-#### [Ingestion](dags/data_crawling.py)
+#### [Ingestion (run weekly)](dags/data_crawling.py)
+
 <p align="center">
   <img width="400" alt="ingest dag" src="assets/ingest_dag.png">
 </p>
 
-#### [Processing](dags/data_processing.py)
+All tasks run in parallel since they are producing/consuming from Kafka, which means there are no upstream dependencies. The producers terminates after they have published all the data specified, while the consumers stops after 15 minutes of idle time (not receiving any new message)
+#### [Processing (run daily)](dags/data_processing.py)
+After the ingestion step, the raw data will be processed to serve the downstream tasks (machine learning and visualisation)
 <p align="center">
   <img width="600" alt="processing dag" src="assets/processing_dag.png">
 </p>
