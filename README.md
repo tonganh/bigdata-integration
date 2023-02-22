@@ -17,8 +17,29 @@ product. In addition, we’d like to provide sellers with various visualizations
 The data are obtained through e-commerce websites (Lazada and Shopee), which are then used to perform price analysis and train price-prediction models.
 
 ## Overall architecture
-![Alt text](./images/architecture.png)
+<p align="center">
+  <img width="700" alt="ingest dag" src="images/architecture.png">
+</p>
+
+### Ingestion overview
+<p align="center">
+  <img width="700" alt="ingest dag" src="images/ingestion.png">
+</p>
+
+### Data pipelines
+#### [Ingestion](dags/data_crawling.py)
+<p align="center">
+  <img width="400" alt="ingest dag" src="images/ingest_dag.png">
+</p>
+
+#### [Processing](dags/data_processing.py)
+<p align="center">
+  <img width="600" alt="ingest dag" src="images/processing_dag.png">
+</p>
 
 ## Dependencies
-- chrome
+- chrome 110.0.5481.77
+- hadoop 3.3.4
+- spark 3.3.1
+- confluent 2.28.1
 - python packages: `pip install -r requirements.txt`
